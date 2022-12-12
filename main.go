@@ -38,9 +38,7 @@ func client() {
 		log.Panic(err)
 	}
 
-	bot.Debug = true
-
-	log.Printf("Authorized on account %s", bot.Self.UserName)
+	bot.Debug = false
 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
@@ -48,18 +46,28 @@ func client() {
 	updates := bot.GetUpdatesChan(u)
 
 	for update := range updates {
-		if update.Message != nil {
-			msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
+		text := update.Message.Text
+		chatId := update.Message.Chat.ID
 
-			switch update.Message.Text {
+		hi := "hi"
+		you := "you"
+
+		if update.Message != nil {
+			msg := tgbotapi.NewMessage(chatId, update.Message.Text)
+
+			switch text {
+			case hi:
+				bot.Send(tgbotapi.NewMessage(chatId, "hi my friend"))
+			case you:
+				bot.Send(tgbotapi.NewMessage(chatId, "end you you"))
 			case "open":
 				msg.ReplyMarkup = numericKeyboard
+				bot.Send(msg)
+			default:
+				bot.Send(tgbotapi.NewMessage(chatId, "i don't understand you human"))
 
 			}
 
-			if _, err = bot.Send(msg); err != nil {
-				panic(err)
-			}
 		} else if update.CallbackQuery != nil {
 			callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
 			if _, err := bot.Request(callback); err != nil {
