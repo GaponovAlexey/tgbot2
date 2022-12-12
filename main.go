@@ -1,16 +1,26 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 
-	tg "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/joho/godotenv"
 
 )
 
-
+var numericKeyboard = tgbotapi.NewInlineKeyboardMarkup(
+	tgbotapi.NewInlineKeyboardRow(
+		tgbotapi.NewInlineKeyboardButtonURL("1.com", "http://1.com"),
+		tgbotapi.NewInlineKeyboardButtonData("2", "2"),
+		tgbotapi.NewInlineKeyboardButtonData("3", "3"),
+	),
+	tgbotapi.NewInlineKeyboardRow(
+		tgbotapi.NewInlineKeyboardButtonData("4", "4"),
+		tgbotapi.NewInlineKeyboardButtonData("5", "5"),
+		tgbotapi.NewInlineKeyboardButtonData("6", "6"),
+	),
+)
 
 func main() {
 	err := godotenv.Load() // читать .env
@@ -22,59 +32,44 @@ func main() {
 }
 
 func client() {
-	var numericKeyboard = tg.NewInlineKeyboardMarkup(
-		tg.NewInlineKeyboardRow(
-			tg.NewInlineKeyboardButtonURL("1.com", "http://1.com"),
-			tg.NewInlineKeyboardButtonData("2", "2"),
-			tg.NewInlineKeyboardButtonData("3", "3"),
-		),
-		tg.NewInlineKeyboardRow(
-			tg.NewInlineKeyboardButtonData("4", "4"),
-			tg.NewInlineKeyboardButtonData("5", "5"),
-			tg.NewInlineKeyboardButtonData("6", "6"),
-		),
-	)
 
-	bot, err := tg.NewBotAPI(os.Getenv("TOKEN"))
+	bot, err := tgbotapi.NewBotAPI(os.Getenv("TOKEN"))
 	if err != nil {
 		log.Panic(err)
 	}
 
-	bot.Debug = false
+	bot.Debug = true
 
-	u := tg.NewUpdate(0)
-	u.Timeout = 100
+	log.Printf("Authorized on account %s", bot.Self.UserName)
+
+	u := tgbotapi.NewUpdate(0)
+	u.Timeout = 60
 
 	updates := bot.GetUpdatesChan(u)
 
 	for update := range updates {
-		text := update.Message.Text
-		chatId := update.Message.Chat.ID
-		hi := "hi"
-		you := "you"
-		open := "open"
+		if update.Message != nil {
+			msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
 
-		
-		msg := tg.NewMessage(chatId, text)
+			switch update.Message.Text {
+			case "open":
+				msg.ReplyMarkup = numericKeyboard
 
-		//command
-		switch text {
-		case hi:
-			bot.Send(tg.NewMessage(chatId, "hi my friend"))
-		case open:
-			msg.ReplyMarkup = numericKeyboard
-		case you:
-			bot.Send(tg.NewMessage(chatId, "you you you bro"))
-		default:
-			bot.Send(tg.NewMessage(chatId, "i don't understand you human"))
+			}
+
+			if _, err = bot.Send(msg); err != nil {
+				panic(err)
+			}
+		} else if update.CallbackQuery != nil {
+			callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
+			if _, err := bot.Request(callback); err != nil {
+				panic(err)
+			}
+
+			msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Data)
+			if _, err := bot.Send(msg); err != nil {
+				panic(err)
+			}
 		}
-		///da 
-
-		
 	}
-
 }
-
-// func (s Struct) send() {
-// 	bot.Send(tg.NewMessage(chatId, s))
-// }
